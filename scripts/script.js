@@ -1,6 +1,22 @@
 document.addEventListener('DOMContentLoaded', () => {
   'use strict';
 
+  const getData = (url, callback) => {
+    const request = new XMLHttpRequest();
+    request.open('GET', url);
+    request.send();
+
+    request.addEventListener('readystatechange', () => {
+      if (request.readyState !== 4) return;
+      if (request.status === 200) {
+        const response = JSON.parse(request.response)
+        callback(response);
+      } else {
+        console.error(new Error('Error:' + request.status))
+      }
+    });
+  };
+
   const tabs = () => {
     const cardDetailChangeElems = document.querySelectorAll('.card-detail__change');
     const cardDetailsTitleElem = document.querySelector('.card-details__title');
@@ -91,22 +107,89 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const modal = () => {
     const cardDetailsButtonBuy = document.querySelector('.card-details__button_buy');
+    const cardDetailsButtonDelivery = document.querySelector('.card-details__button_delivery');
     const modal = document.querySelector('.modal');
-    cardDetailsButtonBuy.addEventListener('click', () => {
-      modal.classList.add('open')
-    });
+    const cardDetailsTitle = document.querySelector('.card-details__title');
+    const modalTitle = modal.querySelector('.modal__title');
+    const modalSubtitle = modal.querySelector('.modal__subtitle');
+
+    const openModal = (e) => {
+      const target = e.target;
+      modal.classList.add('open');
+      document.addEventListener('keydown', escapeHandler);
+      modalTitle.textContent = cardDetailsTitle.textContent;
+      modalSubtitle.textContent = target.dataset.buttonBuy;
+    };
+
+    const closeModal = () => {
+      modal.classList.remove('open');
+      document.removeEventListener('keydown', escapeHandler);
+    };
+
+    const escapeHandler = (e) => {
+      if (e.code === 'Escape') {
+        closeModal();
+      }
+    };
+
     modal.addEventListener('click', (e) => {
       const target = e.target;
-      if (target.classList.contains('modal__close')) {
-        modal.classList.remove('open')
+      if (target.classList.contains('modal__close') || target === modal) {
+        closeModal();
       }
+    });
 
-    })
+    cardDetailsButtonBuy.addEventListener('click', openModal);
+    cardDetailsButtonDelivery.addEventListener('click', openModal);
+
+  };
+
+  const renderCrossSell = () => {
+    const crossSellList = document.querySelector('.cross-sell__list');
+    const crossSellAdd = document.querySelector('.cross-sell__add');
+    const allGoods = [];
+
+    const shuffle = arr => arr.sort(() => Math.random() - 0.5);
+
+    const createCrossSellItem = (good) => {
+      const liItem = document.createElement('li');
+      liItem.innerHTML = `
+            <article class="cross-sell__item" ${good.id}>
+							<img class="cross-sell__image" src="${good.photo}" alt="${good.name}">
+							<h3 class="cross-sell__title">${good.name}</h3>
+							<p class="cross-sell__price">${good.price}₽</p>
+							<button type="button" class="button button_buy cross-sell__button">Купить</button>
+						</article>
+      `;
+      return liItem;
+    };
+
+    const render = arr => {
+      arr.forEach(item => {
+        crossSellList.append(createCrossSellItem(item));
+      })
+    };
+
+
+    const createCrossSellList = (goods) => {
+      allGoods.push(...shuffle(goods));
+      const fourItems = allGoods.splice(0, 4);
+      render(fourItems);
+    };
+
+    crossSellAdd.addEventListener('click', () => {
+      render(allGoods);
+      crossSellAdd.remove();
+    });
+
+    getData('cross-sell-dbase/dbase.json', createCrossSellList);
   }
 
   tabs();
   accordeon();
   modal();
+  renderCrossSell();
+  amenu('.header__menu', '.header-menu__list', '.header-menu__item', '.header-menu__burger');
 
 
 });
